@@ -8,7 +8,6 @@ import { User } from 'firebase/auth';
 import {
   initAuth,
   googleSignIn,
-  googleSignInRedirect,
   logout,
   getAccessToken,
   SCOPES
@@ -34,10 +33,7 @@ import {
   TableProperties,
   ArrowRight,
   ExternalLink,
-  History,
-  AlertTriangle,
-  RefreshCw,
-  Maximize2
+  History
 } from 'lucide-react';
 
 const LOCAL_STORAGE_FORMS_KEY = 'student_hub_google_forms_history';
@@ -47,7 +43,6 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginError, setLoginError] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'dashboard' | 'preview'>('builder');
 
   const [activeForm, setActiveForm] = useState<GoogleFormDetails | null>(null);
@@ -66,15 +61,12 @@ export default function App() {
   const [showRegistryModal, setShowRegistryModal] = useState(false);
   const [creationSuccessNotice, setCreationSuccessNotice] = useState<string | null>(null);
 
-  const isEmbeddedInIframe = typeof window !== 'undefined' && window.self !== window.top;
-
   // Initialize auth listener
   useEffect(() => {
     const unsubscribe = initAuth(
       (currentUser, accessToken) => {
         setUser(currentUser);
         setToken(accessToken);
-        setLoginError(null);
       },
       () => {
         setUser(null);
@@ -109,42 +101,17 @@ export default function App() {
   }, [token, activeForm?.formId]);
 
   const handleLogin = async () => {
-    setLoginError(null);
+    setIsLoggingIn(true);
     try {
-      // Invoke signInWithPopup synchronously within user click gesture
-      const loginPromise = googleSignIn();
-      setIsLoggingIn(true);
-      const result = await loginPromise;
+      const result = await googleSignIn();
       if (result) {
         setUser(result.user);
         setToken(result.accessToken);
-        setLoginError(null);
       }
     } catch (err: any) {
       console.error('Login failed:', err);
-      setLoginError(err);
     } finally {
       setIsLoggingIn(false);
-    }
-  };
-
-  const handleLoginRedirect = async () => {
-    setLoginError(null);
-    try {
-      setIsLoggingIn(true);
-      await googleSignInRedirect();
-    } catch (err: any) {
-      console.error('Redirect login failed:', err);
-      setLoginError(err);
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleOpenInNewTab = () => {
-    try {
-      window.open(window.location.href, '_blank');
-    } catch (e) {
-      console.error('Failed to open new tab:', e);
     }
   };
 
@@ -152,14 +119,7 @@ export default function App() {
     await logout();
     setUser(null);
     setToken(null);
-    setLoginError(null);
   };
-
-  const isPopupBlocked =
-    loginError &&
-    (loginError.code === 'auth/popup-blocked' ||
-      loginError.message?.toLowerCase().includes('popup-blocked') ||
-      loginError.message?.toLowerCase().includes('popup'));
 
   const handleCreateForm = async (config: FormCreationConfig) => {
     if (!token) {
@@ -247,87 +207,7 @@ export default function App() {
 
         {/* If user is not authenticated with Google, show onboarding hero */}
         {!token ? (
-          <div className="max-w-4xl mx-auto py-6 sm:py-10 space-y-8">
-            {/* Pop-up Blocked Resolution Banner */}
-            {isPopupBlocked && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4 animate-in fade-in duration-200">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-amber-900">
-                      Browser Pop-up Blocked
-                    </h3>
-                    <p className="text-xs text-amber-800 leading-relaxed">
-                      Your web browser prevented the Google Sign-In authentication pop-up from appearing. This is common when testing inside an embedded preview iframe or when strict pop-up blockers are active.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <button
-                    onClick={handleOpenInNewTab}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white border border-amber-300 hover:border-amber-400 rounded-xl text-left shadow-xs transition-all hover:bg-amber-50/50 cursor-pointer"
-                  >
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
-                      <Maximize2 className="w-3.5 h-3.5 text-purple-600" />
-                      1. Open in Full Tab
-                    </span>
-                    <span className="text-[11px] text-gray-500 mt-1 text-center">
-                      Bypasses iframe security and allows pop-ups cleanly
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={handleLogin}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white border border-amber-300 hover:border-amber-400 rounded-xl text-left shadow-xs transition-all hover:bg-amber-50/50 cursor-pointer"
-                  >
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
-                      <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
-                      2. Retry Sign In
-                    </span>
-                    <span className="text-[11px] text-gray-500 mt-1 text-center">
-                      First click the 🚫 icon in your address bar to "Always allow"
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={handleLoginRedirect}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white border border-amber-300 hover:border-amber-400 rounded-xl text-left shadow-xs transition-all hover:bg-amber-50/50 cursor-pointer"
-                  >
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
-                      <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                      3. Sign In via Redirect
-                    </span>
-                    <span className="text-[11px] text-gray-500 mt-1 text-center">
-                      Alternative flow using full page navigation
-                    </span>
-                  </button>
-                </div>
-
-                <div className="text-[11px] text-amber-700 bg-amber-100/70 px-3 py-2 rounded-lg flex items-center gap-2">
-                  <span className="font-semibold">Quick Tip:</span> Look at the right edge of your browser's URL address bar for a blocked pop-up icon (or "Pop-up blocked") and click <em>"Always allow pop-ups for this site"</em>.
-                </div>
-              </div>
-            )}
-
-            {/* General Login Error Alert (Non-popup) */}
-            {loginError && !isPopupBlocked && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-800 flex items-center justify-between shadow-xs">
-                <div>
-                  <span className="font-bold">Authentication failed: </span>
-                  <span>{loginError.message || String(loginError)}</span>
-                </div>
-                <button
-                  onClick={handleLogin}
-                  className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg font-medium cursor-pointer"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
+          <div className="max-w-4xl mx-auto py-10 space-y-12">
             {/* Hero Card */}
             <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-8 sm:p-12 text-center space-y-6">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
@@ -351,7 +231,8 @@ export default function App() {
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   onClick={handleLogin}
-                  className="px-6 py-3.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-sm transition-all flex items-center gap-3 cursor-pointer group"
+                  disabled={isLoggingIn}
+                  className="px-6 py-3.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-sm transition-all flex items-center gap-3 cursor-pointer group disabled:opacity-60"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 48 48">
                     <path
@@ -376,17 +257,6 @@ export default function App() {
                   </span>
                   <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-
-                {isEmbeddedInIframe && (
-                  <button
-                    onClick={handleOpenInNewTab}
-                    className="inline-flex items-center gap-1.5 px-4 py-3 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl transition-colors cursor-pointer"
-                    title="Open app directly in a full browser tab"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>Open App in Full Tab</span>
-                  </button>
-                )}
               </div>
 
               {/* Scope assurance */}
@@ -457,16 +327,6 @@ export default function App() {
                 <span className="text-xs text-gray-500">
                   Target Fields: Name • Course • Year • Department
                 </span>
-                {isEmbeddedInIframe && (
-                  <button
-                    onClick={handleOpenInNewTab}
-                    className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 font-medium"
-                    title="Open in standalone tab"
-                  >
-                    <Maximize2 className="w-3 h-3" />
-                    <span>Pop out</span>
-                  </button>
-                )}
               </div>
             </div>
 
@@ -517,4 +377,3 @@ export default function App() {
     </div>
   );
 }
-
