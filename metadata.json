@@ -1,0 +1,6 @@
+{
+  "name": "Student Registration Google Form Builder",
+  "description": "Create and manage Google Forms for student registrations with fields for name, course, year of study, and department, plus view and analyze form responses.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
